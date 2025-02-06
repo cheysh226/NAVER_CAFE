@@ -1,6 +1,6 @@
 # %%
 #########################################
-keyword = ['영유아', '역량강화']
+keyword = ['"유아"', '"미래역량"']
 #########################################
 ## 0. 초기 셋팅 부분 (라이브러리, driver 시작)
 
@@ -57,17 +57,17 @@ i=2
 
 # %%
 ## 3. 크롤링 부분 --- 10분 정도 소요됨
-driver.get(f'https://search.naver.com/search.naver?ssc=tab.cafe.all&sm=tab_jum&query={"+".join(keyword)}')
+driver.get(f'https://search.naver.com/search.naver?ssc=tab.cafe.all&sm=tab_jum&query={"+".join(keyword)}&ie=utf8&st=rel&date_option=8&date_from=2019.06.01&date_to=2024.05.31')
 
 titleElements = driver.find_elements(By.CSS_SELECTOR,'div.title_area > a')
 for titleElem in titleElements:
-	time.sleep(1)
+	time.sleep(3)
 	cafelink = titleElem.get_attribute('href')
 	if 'cafe.naver.com' not in cafelink:
 		continue
 	driver.switch_to.new_window('tab')
 	driver.get(cafelink)
-	time.sleep(1)
+	time.sleep(3)
 	cafeName = driver.find_element(By.CSS_SELECTOR,'h1').text.strip()
 	driver.switch_to.default_content()
 	driver.switch_to.frame(driver.find_element(By.CSS_SELECTOR,'#cafe_main'))
@@ -75,18 +75,23 @@ for titleElem in titleElements:
 		title = driver.find_element(By.CSS_SELECTOR,'h3.title_text').text.strip()
 		context = driver.find_element(By.CSS_SELECTOR,'div.content.CafeViewer').text.strip()
 		created_at = driver.find_element(By.CSS_SELECTOR,'div.article_header span.date').text.strip()
-		print(title, context, created_at)
+		print(title)
 	except:
 		pass
-	created_at = datetime.datetime.strptime(created_at,'%Y.%m.%d. %H:%M').strftime('%Y-%m-%d')
-
+	try:
+		created_at = datetime.datetime.strptime(created_at,'%Y.%m.%d. %H:%M').strftime('%Y-%m-%d')
+	except:
+		pass
 	title = ILLEGAL_CHARACTERS_RE.sub(r'', title)
 	context = ILLEGAL_CHARACTERS_RE.sub(r'', context)
 	title = sanitize_excel_value(title)
 	context = sanitize_excel_value(context)
 	# ['분류', '작성일자', '카페글 제목', '내용', '카페 주소','','카페글 이모지제거','내용 이모지제거', '카페명','이하 댓글']
 	# 댓글들
-	replies = [commentElem.find_element(By.CSS_SELECTOR,"span.text_comment").text for commentElem in driver.find_elements(By.CSS_SELECTOR,'li.CommentItem')]
+	try:
+		replies = [commentElem.find_element(By.CSS_SELECTOR,"span.text_comment").text for commentElem in driver.find_elements(By.CSS_SELECTOR,'li.CommentItem')]
+	except:
+		replies = [commentElem.find_element(By.CSS_SELECTOR,".comment_area").text for commentElem in driver.find_elements(By.CSS_SELECTOR,'li.CommentItem')]
 
 	# tr = ['cafe', created_at, title, context, cafelink,'',remove_emoji(title), remove_emoji(context),cafeName ] + replies
 	tr = ['cafe', created_at, title, context, cafelink,cafeName ] + replies
@@ -98,9 +103,13 @@ for titleElem in titleElements:
 
 # 파일 저장
 filename = f"{'_'.join(keyword)}_네이버카페.xlsx"
+filename = "TEST.xlsx"
 wb.save(filename)
 
 # 엑셀 파일 자동으로 열기 (Windows용)
 os.startfile(filename)
+
+# %%
+
 
 
